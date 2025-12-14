@@ -218,13 +218,13 @@ class DatapackZipper:
         print(f"Datapack zip created: {datapack_zip_filename}")
 
         if self.has_rpack_checkbox.value:
-            ressource_zip_filename = os.path.join(target_folder, f"{datapack_name}_ressources.zip")
+            resource_zip_filename = os.path.join(target_folder, f"{datapack_name}_resources.zip")
             
-            with zipfile.ZipFile(ressource_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
+            with zipfile.ZipFile(resource_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
                 add_folder_to_zip(zf, os.path.join(root_folder, "assets"), arc_folder_name="assets")
                 
                 # Choose which resource pack meta file to include (try both valid names)
-                for candidate in ("resource_pack.mcmeta", "pack_ressourcepack.mcmeta"):
+                for candidate in ("resource_pack.mcmeta", "pack_resourcepack.mcmeta"):
                     candidate_path = os.path.join(root_folder, candidate)
                     if os.path.exists(candidate_path):
                         # add version folders from overlays
@@ -237,10 +237,10 @@ class DatapackZipper:
                         zf.write(candidate_path, arcname="pack.mcmeta")
                         break
                 else:
-                    print("No resource pack metadata file found (tried resource_pack.mcmeta, pack_ressourcepack.mcmeta).")
+                    print("No resource pack metadata file found (tried resource_pack.mcmeta, pack_resourcepack.mcmeta).")
                 zf.write(os.path.join(root_folder, "pack.png"), arcname="pack.png")
                 
-            print(f"Ressource pack zip created: {ressource_zip_filename}")
+            print(f"resource pack zip created: {resource_zip_filename}")
             # Save settings as well
             self.save_config()
 
