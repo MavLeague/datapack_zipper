@@ -208,7 +208,7 @@ class DatapackZipper:
             version_folders = get_version_folders(os.path.join(root_folder, "pack.mcmeta"))
             if not version_folders == []:
                 for folder in version_folders:
-                    add_folder_to_zip(zf, os.path.join(root_folder, folder))
+                    add_folder_to_zip(zf, os.path.join(root_folder, folder, "data"), arc_folder_name=f"{folder}/data")
             
             # write pack.mcmeta and icon
             zf.write(os.path.join(root_folder, "pack.mcmeta"), arcname="pack.mcmeta")
@@ -231,7 +231,7 @@ class DatapackZipper:
                         version_folders = get_version_folders(candidate_path)
                         if not version_folders == []:
                             for folder in version_folders:
-                                add_folder_to_zip(zf, os.path.join(root_folder, folder))
+                                add_folder_to_zip(zf, os.path.join(root_folder, folder, "assets"), arc_folder_name=f"{folder}/assets")
                         
                         # write pack.mcmeta
                         zf.write(candidate_path, arcname="pack.mcmeta")
