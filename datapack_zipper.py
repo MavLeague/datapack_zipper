@@ -210,6 +210,7 @@ class DatapackZipper:
                 for folder in version_folders:
                     add_folder_to_zip(zf, os.path.join(root_folder, folder))
             
+            # write pack.mcmeta and icon
             zf.write(os.path.join(root_folder, "pack.mcmeta"), arcname="pack.mcmeta")
             zf.write(os.path.join(root_folder, "pack.png"), arcname="pack.png")
         # Save current settings after creating the zip
