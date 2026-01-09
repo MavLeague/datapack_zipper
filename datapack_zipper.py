@@ -4,7 +4,7 @@ import zipfile
 import json
 
 # Zipping functions
-def add_folder_to_zip(zf: zipfile.ZipFile, folder_path: str, arc_folder_name: str = None):
+def add_folder_to_zip(zf: zipfile.ZipFile, folder_path: str, arc_folder_name: str = None, allowed_extensions: list = None):
 
     if arc_folder_name is None:
         arc_folder_name = os.path.basename(folder_path)
@@ -13,6 +13,11 @@ def add_folder_to_zip(zf: zipfile.ZipFile, folder_path: str, arc_folder_name: st
     
     for root, _, files in os.walk(folder_path):
         for file in files:
+            if allowed_extensions:
+                _, ext = os.path.splitext(file)
+                if ext.lower() not in allowed_extensions:
+                    continue
+
             file_path = os.path.join(root, file)
             
             relative_path = os.path.relpath(file_path, folder_path)
@@ -199,16 +204,19 @@ class DatapackZipper:
             e.page.update()
             return
         
+        # Liste der erlaubten Dateiendungen (alles kleingeschrieben)
+        allowed_extensions = ['.json', '.mcmeta', '.png', '.nbt', '.mcfunction', '.ogg', '.fsh', '.vsh']
+
         datapack_zip_filename = os.path.join(target_folder, f"{datapack_name}.zip")
         
         with zipfile.ZipFile(datapack_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
-            add_folder_to_zip(zf, os.path.join(root_folder, "data"), arc_folder_name="data")
+            add_folder_to_zip(zf, os.path.join(root_folder, "data"), arc_folder_name="data", allowed_extensions=allowed_extensions)
             
             # add version folders from overlays
             version_folders = get_version_folders(os.path.join(root_folder, "pack.mcmeta"))
             if not version_folders == []:
                 for folder in version_folders:
-                    add_folder_to_zip(zf, os.path.join(root_folder, folder, "data"), arc_folder_name=f"{folder}/data")
+                    add_folder_to_zip(zf, os.path.join(root_folder, folder, "data"), arc_folder_name=f"{folder}/data", allowed_extensions=allowed_extensions)
             
             # write pack.mcmeta and icon
             zf.write(os.path.join(root_folder, "pack.mcmeta"), arcname="pack.mcmeta")
@@ -221,7 +229,7 @@ class DatapackZipper:
             resource_zip_filename = os.path.join(target_folder, f"{datapack_name}_resources.zip")
             
             with zipfile.ZipFile(resource_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
-                add_folder_to_zip(zf, os.path.join(root_folder, "assets"), arc_folder_name="assets")
+                add_folder_to_zip(zf, os.path.join(root_folder, "assets"), arc_folder_name="assets", allowed_extensions=allowed_extensions)
                 
                 # Choose which resource pack meta file to include (try both valid names)
                 for candidate in ("resource_pack.mcmeta", "pack_resourcepack.mcmeta"):
@@ -231,7 +239,7 @@ class DatapackZipper:
                         version_folders = get_version_folders(candidate_path)
                         if not version_folders == []:
                             for folder in version_folders:
-                                add_folder_to_zip(zf, os.path.join(root_folder, folder, "assets"), arc_folder_name=f"{folder}/assets")
+                                add_folder_to_zip(zf, os.path.join(root_folder, folder, "assets"), arc_folder_name=f"{folder}/assets", allowed_extensions=allowed_extensions)
                         
                         # write pack.mcmeta
                         zf.write(candidate_path, arcname="pack.mcmeta")
