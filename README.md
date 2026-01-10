@@ -1,6 +1,8 @@
 # datapack_zipper
 This simple python script zips your Minecraft data- and resourcepacks!
 
+Some parts of this code are vibe coded. If you can find some mistakes, bugs or just bad programming please let me, I'm still just a rookie:D
+
 ## Example configuration
 <img width="468" height="424" alt="image" src="https://github.com/user-attachments/assets/d907b777-3244-44c3-aba1-24413ffdf3e0" />
 
