@@ -57,6 +57,41 @@ def get_version_folders(pack_path: str):
         print(f"Error reading pack.mcmeta: {e} has no overlays?")
     return version_folders
 
+def insert_version(version_text: str, version_macro: str, reload_functions: list, datapack_path: str):
+    parts = version_text.split(";")
+    if len(parts) != version_macro.count("%s"):
+        print(f"Error: version_text has {len(parts)} parts, but version_macro expects {version_macro.count('%s')}.")
+        return
+
+    version_code = version_macro % tuple(parts)
+    print(f"Generated Command: {version_code}")
+    
+    for file_info in reload_functions:
+        if ":" not in file_info["function"]:
+            print(f"Skipping invalid function format: {file_info['function']}")
+            continue
+
+        namespace, function_file = file_info["function"].split(":", 1)
+        # Pfad zusammenbauen: root/data/namespace/functions/datei
+        full_path = os.path.join(datapack_path, "data", namespace, "function", function_file)
+        
+        if os.path.exists(full_path):
+            with open(full_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            # Zeile ersetzen (Zeilennummer im Config ist 1-basiert)
+            if 0 <= file_info["line"] - 1 < len(lines):
+                lines[file_info["line"] - 1] = version_code + "\n"
+                
+                with open(full_path, "w", encoding="utf-8") as f:
+                    f.writelines(lines)
+                print(f"Updated {full_path} at line {file_info['line']}")
+            else:
+                print(f"Line {file_info['line']} out of bounds in {full_path}")
+        else:
+            print(f"File not found: {full_path}")
+
+
 # This class defines your reusable GUI component
 class DatapackZipper:
     def __init__(self):
@@ -100,6 +135,10 @@ class DatapackZipper:
             "root_folder_path": (getattr(self, 'root_folder_path', None) and self.root_folder_path.value) or self.config.get("root_folder_path", ""),
             "target_folder_path": (getattr(self, 'target_folder_path', None) and self.target_folder_path.value) or self.config.get("target_folder_path", ""),
             "has_rpack": (getattr(self, 'has_rpack_checkbox', None) and self.has_rpack_checkbox.value) or self.config.get("has_rpack", False),
+            "insert_version": (getattr(self, 'version_checkbox', None) and self.version_checkbox.value) or self.config.get("insert_version", False),
+            "version_text": (getattr(self, 'version_text', None) and self.version_text.value) or self.config.get("version_text", ""),
+            "version_macro": (getattr(self, 'version_macro', None) and self.version_macro.value) or self.config.get("version_macro", ""),
+            "reload_function": (getattr(self, 'reload_function', None) and self.reload_function.value) or self.config.get("reload_function", [{"function": "reload.mcfunction", "line": 1}]),
         }
         try:
             # Load existing raw config to preserve other project sections
@@ -119,6 +158,7 @@ class DatapackZipper:
             self.config = data
         except Exception as e:
             print(f"Failed to save config: {e}")
+    
     def create_ui(self):
         # Text fields for ID and name (pre-fill from config if available)
         self.datapack_name = ft.TextField(
@@ -127,6 +167,11 @@ class DatapackZipper:
             value=self.config.get("datapack_name", ""),
             on_change=lambda e: self.save_config(),
         )
+        
+        def toggle_version_text(e):
+            self.version_text.visible = self.version_checkbox.value
+            self.version_text.update()
+            self.save_config()
 
         self.root_folder_path = ft.TextField(
             label="Datapack Folder",
@@ -150,7 +195,22 @@ class DatapackZipper:
             on_change=lambda e: self.save_config(),
         )
 
+        self.version_checkbox = ft.Checkbox(
+            label="Insert Version",
+            value=self.config.get("insert_version", False),
+            on_change=toggle_version_text,
+        )
+        
+        self.version_text = ft.TextField(
+            label="Version",
+            width=300,
+            value=self.config.get("version_text", ""),
+            on_change=lambda e: self.save_config(),
+            visible=self.config.get("insert_version", False),
+        )
+
         create_button = ft.ElevatedButton("Zip Datapack!", on_click=self.create_zip)
+        version_button = ft.ElevatedButton("Insert Version", on_click=self.insert_version_trigger)
         root_choose_button = ft.ElevatedButton("Choose Folder", on_click=lambda _: self.root_folder_picker.get_directory_path())
         target_choose_button = ft.ElevatedButton("Choose Folder", on_click=lambda _: self.target_folder_picker.get_directory_path())
 
@@ -163,7 +223,9 @@ class DatapackZipper:
                 ft.Row([self.root_folder_path, root_choose_button]),
                 ft.Row([self.target_folder_path, target_choose_button]),
                 self.has_rpack_checkbox,
-                create_button,
+                self.version_checkbox,
+                self.version_text,
+                ft.Row([create_button, version_button]),
             ],
             alignment=ft.MainAxisAlignment.START,
             spacing=15,
@@ -181,8 +243,19 @@ class DatapackZipper:
             self.target_folder_path.update()
             self.save_config()
             
+    def insert_version_trigger(self, e):
+        print("--- Inserting Version text to pack ---\n")
+        if self.version_checkbox.value:
+            if not self.version_text.value:
+                e.page.snack_bar = ft.SnackBar(ft.Text("Please enter a version."))
+                e.page.snack_bar.open = True
+                e.page.update()
+                return
+            
+            insert_version(self.version_text.value, self.config.get("version_macro"), self.config.get("reload_function"), self.root_folder_path.value)
+    
     def create_zip(self, e):
-        print("Creating datapack zip...")
+        print("--- Creating datapack zip... ---\n")
         root_folder = self.root_folder_path.value
         if not root_folder:
             e.page.snack_bar = ft.SnackBar(ft.Text("Please choose a datapack folder."))
