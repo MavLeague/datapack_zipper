@@ -1,6 +1,6 @@
 import flet as ft
 from datapack_zipper import DatapackZipper
-
+from resource_sync import ResourceSync
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
@@ -38,6 +38,7 @@ def main(page: ft.Page):
     # Other GUI parts could be here
     header = ft.Text("Datapack Manager", size=24, weight=ft.FontWeight.BOLD)
     datapack_module = DatapackZipper()
+    sync_module = ResourceSync()
     
     page.add(
         header,
@@ -45,6 +46,11 @@ def main(page: ft.Page):
             make_section(
                 "Datapack Zipper",
                 datapack_module.create_ui(),
+                ft.Icon(name=ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
+            ),
+            make_section(
+                "Sync Resourcepack",
+                sync_module.create_ui(),
                 ft.Icon(name=ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
             )
         ])

@@ -72,14 +72,14 @@ def insert_version(version_text: str, version_macro: str, reload_functions: list
             continue
 
         namespace, function_file = file_info["function"].split(":", 1)
-        # Pfad zusammenbauen: root/data/namespace/functions/datei
+        # Construct path: root/data/namespace/functions/file
         full_path = os.path.join(datapack_path, "data", namespace, "function", function_file)
         
         if os.path.exists(full_path):
             with open(full_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
             
-            # Zeile ersetzen (Zeilennummer im Config ist 1-basiert)
+            # Replace line (Line number in config is 1-based)
             if 0 <= file_info["line"] - 1 < len(lines):
                 lines[file_info["line"] - 1] = version_code + "\n"
                 
@@ -211,8 +211,8 @@ class DatapackZipper:
 
         create_button = ft.ElevatedButton("Zip Datapack!", on_click=self.create_zip)
         version_button = ft.ElevatedButton("Insert Version", on_click=self.insert_version_trigger)
-        root_choose_button = ft.ElevatedButton("Choose Folder", on_click=lambda _: self.root_folder_picker.get_directory_path())
-        target_choose_button = ft.ElevatedButton("Choose Folder", on_click=lambda _: self.target_folder_picker.get_directory_path())
+        root_choose_button = ft.ElevatedButton("Browse", on_click=lambda _: self.root_folder_picker.get_directory_path())
+        target_choose_button = ft.ElevatedButton("Browse", on_click=lambda _: self.target_folder_picker.get_directory_path())
 
         # Main layout
         return ft.Column(
@@ -277,7 +277,7 @@ class DatapackZipper:
             e.page.update()
             return
         
-        # Liste der erlaubten Dateiendungen (alles kleingeschrieben)
+        # List of permitted file extensions
         allowed_extensions = ['.json', '.mcmeta', '.png', '.nbt', '.mcfunction', '.ogg', '.fsh', '.vsh']
 
         datapack_zip_filename = os.path.join(target_folder, f"{datapack_name}.zip")
