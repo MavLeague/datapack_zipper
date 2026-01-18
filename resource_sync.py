@@ -92,16 +92,23 @@ class ResourceSync:
     def on_minecraft_path_picked(self, e: ft.FilePickerResultEvent):
         if e.path:
             self.minecraft_path.value = e.path
+            self.minecraft_path.tooltip = e.path
             self.minecraft_path.update()
             self.save_config()
 
     def create_ui(self):
         # Define your UI components here
+        def on_path_change(e):
+            e.control.tooltip = e.control.value
+            e.control.update()
+            self.save_config()
+
         self.minecraft_path = ft.TextField(
             label="Minecraft Game Path",
             width=300,
             value=self.config.get("minecraft_path", ""),
-            on_change=lambda e: self.save_config(),
+            tooltip=self.config.get("minecraft_path", ""),
+            on_change=on_path_change,
         )
         self.minecraft_path_picker = ft.FilePicker(on_result=self.on_minecraft_path_picked)
         

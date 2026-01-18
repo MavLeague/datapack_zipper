@@ -173,11 +173,17 @@ class DatapackZipper:
             self.version_text.update()
             self.save_config()
 
+        def on_path_change(e):
+            e.control.tooltip = e.control.value
+            e.control.update()
+            self.save_config()
+
         self.root_folder_path = ft.TextField(
             label="Datapack Folder",
             width=300,
             value=self.config.get("root_folder_path", ""),
-            on_change=lambda e: self.save_config(),
+            tooltip=self.config.get("root_folder_path", ""),
+            on_change=on_path_change,
         )
         self.root_folder_picker = ft.FilePicker(on_result=self.on_root_folder_picked)
 
@@ -185,7 +191,8 @@ class DatapackZipper:
             label="Export Folder",
             width=300,
             value=self.config.get("target_folder_path", ""),
-            on_change=lambda e: self.save_config(),
+            tooltip=self.config.get("target_folder_path", ""),
+            on_change=on_path_change,
         )
         self.target_folder_picker = ft.FilePicker(on_result=self.on_target_folder_picked)
 
@@ -234,12 +241,14 @@ class DatapackZipper:
     def on_root_folder_picked(self, e: ft.FilePickerResultEvent):
         if e.path:
             self.root_folder_path.value = e.path
+            self.root_folder_path.tooltip = e.path
             self.root_folder_path.update()
             self.save_config()
             
     def on_target_folder_picked(self, e: ft.FilePickerResultEvent):
         if e.path:
             self.target_folder_path.value = e.path
+            self.target_folder_path.tooltip = e.path
             self.target_folder_path.update()
             self.save_config()
             
