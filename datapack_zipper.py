@@ -159,6 +159,123 @@ class DatapackZipper:
         except Exception as e:
             print(f"Failed to save config: {e}")
     
+    def open_config_dialog(self, e):
+        try:
+            def get_macro_hint(val):
+                count = val.count("%s") if val else 0
+                return f"Use '%s' as placeholder. Use ; as a divider in the Version Input when using multiple. Current count: {count}"
+
+            macro_hint = ft.Text(
+                value=get_macro_hint(self.config.get("version_macro", "")),
+                size=12,
+                color=ft.Colors.GREY
+            )
+
+            def on_macro_change(e):
+                macro_hint.value = get_macro_hint(e.control.value)
+                macro_hint.update()
+
+            macro_field = ft.TextField(
+                label="Version Macro", 
+                value=self.config.get("version_macro", ""),
+                hint_text="e.g. command %s",
+                on_change=on_macro_change
+            )
+            
+            reload_list_col = ft.Column(spacing=5, scroll=ft.ScrollMode.AUTO)
+            
+            def delete_entry(row):
+                reload_list_col.controls.remove(row)
+                reload_list_col.update()
+
+            def add_entry(data=None, update_ui=True):
+                if data is None:
+                    data = {"function": "", "line": 1}
+                
+                fn_field = ft.TextField(value=data.get("function", ""), label="Function", expand=True, height=40, content_padding=10, text_size=14)
+                line_field = ft.TextField(value=str(data.get("line", 1)), label="Line", width=60, height=40, keyboard_type=ft.KeyboardType.NUMBER, content_padding=10, text_size=14)
+                
+                delete_btn = ft.IconButton(ft.Icons.DELETE)
+                
+                row = ft.Row([
+                    fn_field,
+                    line_field,
+                    delete_btn
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                
+                delete_btn.on_click = lambda e: delete_entry(row)
+                
+                reload_list_col.controls.append(row)
+                if update_ui:
+                    reload_list_col.update()
+
+            current_entries = self.config.get("reload_function", [{"function": "reload.mcfunction", "line": 1}])
+            if not isinstance(current_entries, list):
+                current_entries = []
+                
+            for entry in current_entries:
+                add_entry(entry, update_ui=False)
+
+            def save_close(e):
+                self.config["version_macro"] = macro_field.value
+                
+                new_list = []
+                for row in reload_list_col.controls:
+                    if isinstance(row, ft.Row) and len(row.controls) >= 2:
+                        fn_val = row.controls[0].value
+                        line_val = row.controls[1].value
+                        try:
+                            line_int = int(line_val)
+                        except ValueError:
+                            line_int = 1
+                        
+                        if fn_val:
+                            new_list.append({"function": fn_val, "line": line_int})
+                
+                self.config["reload_function"] = new_list
+                self.save_config()
+                dlg.open = False
+                e.page.update()
+
+            def close(e):
+                dlg.open = False
+                e.page.update()
+
+            dlg = ft.AlertDialog(
+                title=ft.Text("Version Configuration"),
+                content=ft.Container(
+                    width=600,
+                    height=400,
+                    content=ft.Column([
+                        macro_field,
+                        macro_hint,
+                        ft.Divider(),
+                        ft.Row([
+                            ft.Text("Reload Functions", size=16, weight=ft.FontWeight.BOLD),
+                            ft.IconButton(ft.Icons.ADD, on_click=lambda e: add_entry())
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        ft.Container(
+                            content=reload_list_col,
+                            border=ft.border.all(1, ft.Colors.GREY),
+                            border_radius=5,
+                            padding=5,
+                            expand=True
+                        )
+                    ])
+                ),
+                actions=[
+                    ft.TextButton("Cancel", on_click=close),
+                    ft.TextButton("Save", on_click=save_close),
+                ],
+            )
+            
+            e.page.dialog = dlg
+            e.page.open(dlg)
+            e.page.update()
+            print("Config dialog opened.")
+        except Exception as ex:
+            print(f"Error opening config dialog: {ex}")
+
     def create_ui(self):
         # Text fields for ID and name (pre-fill from config if available)
         self.datapack_name = ft.TextField(
@@ -208,6 +325,12 @@ class DatapackZipper:
             on_change=toggle_version_text,
         )
         
+        config_btn = ft.IconButton(
+            icon=ft.Icons.SETTINGS,
+            tooltip="Configure Version Settings",
+            on_click=self.open_config_dialog
+        )
+        
         self.version_text = ft.TextField(
             label="Version",
             width=300,
@@ -230,7 +353,7 @@ class DatapackZipper:
                 ft.Row([self.root_folder_path, root_choose_button]),
                 ft.Row([self.target_folder_path, target_choose_button]),
                 self.has_rpack_checkbox,
-                self.version_checkbox,
+                ft.Row([self.version_checkbox, config_btn]),
                 self.version_text,
                 ft.Row([create_button, version_button]),
             ],
