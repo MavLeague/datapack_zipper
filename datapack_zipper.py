@@ -256,7 +256,7 @@ class DatapackZipper:
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         ft.Container(
                             content=reload_list_col,
-                            border=ft.border.all(1, ft.Colors.GREY),
+                            border=ft.Border.all(1, ft.Colors.GREY),
                             border_radius=5,
                             padding=5,
                             expand=True
@@ -270,7 +270,7 @@ class DatapackZipper:
             )
             
             e.page.dialog = dlg
-            e.page.open(dlg)
+            dlg.open = True
             e.page.update()
             print("Config dialog opened.")
         except Exception as ex:
@@ -302,7 +302,6 @@ class DatapackZipper:
             tooltip=self.config.get("root_folder_path", ""),
             on_change=on_path_change,
         )
-        self.root_folder_picker = ft.FilePicker(on_result=self.on_root_folder_picked)
 
         self.target_folder_path = ft.TextField(
             label="Export Folder",
@@ -311,7 +310,6 @@ class DatapackZipper:
             tooltip=self.config.get("target_folder_path", ""),
             on_change=on_path_change,
         )
-        self.target_folder_picker = ft.FilePicker(on_result=self.on_target_folder_picked)
 
         self.has_rpack_checkbox = ft.Checkbox(
             label="Include Resource Pack",
@@ -339,16 +337,16 @@ class DatapackZipper:
             visible=self.config.get("insert_version", False),
         )
 
-        create_button = ft.ElevatedButton("Zip Datapack!", on_click=self.create_zip)
-        version_button = ft.ElevatedButton("Insert Version", on_click=self.insert_version_trigger)
-        root_choose_button = ft.ElevatedButton("Browse", on_click=lambda _: self.root_folder_picker.get_directory_path())
-        target_choose_button = ft.ElevatedButton("Browse", on_click=lambda _: self.target_folder_picker.get_directory_path())
+        create_button = ft.Button("Zip Datapack!", on_click=self.create_zip)
+        version_button = ft.Button("Insert Version", on_click=self.insert_version_trigger)
+        root_choose_button = ft.Button("Browse", on_click=self.on_root_folder_picked)
+        target_choose_button = ft.Button("Browse", on_click=self.on_target_folder_picked)
 
         # Main layout
         return ft.Column(
             [
-                self.root_folder_picker,
-                self.target_folder_picker,
+                #self.root_folder_picker,
+                #self.target_folder_picker,
                 self.datapack_name,
                 ft.Row([self.root_folder_path, root_choose_button]),
                 ft.Row([self.target_folder_path, target_choose_button]),
@@ -361,17 +359,19 @@ class DatapackZipper:
             spacing=15,
         )
         
-    def on_root_folder_picked(self, e: ft.FilePickerResultEvent):
-        if e.path:
-            self.root_folder_path.value = e.path
-            self.root_folder_path.tooltip = e.path
+    async def on_root_folder_picked(self, e: ft.Event[ft.Button]):
+        path = await ft.FilePicker().get_directory_path()
+        if path is not None:
+            self.root_folder_path.value = path
+            self.root_folder_path.tooltip = path
             self.root_folder_path.update()
             self.save_config()
             
-    def on_target_folder_picked(self, e: ft.FilePickerResultEvent):
-        if e.path:
-            self.target_folder_path.value = e.path
-            self.target_folder_path.tooltip = e.path
+    async def on_target_folder_picked(self, e: ft.Event[ft.Button]):
+        path = await ft.FilePicker().get_directory_path()
+        if path is not None:
+            self.target_folder_path.value = path
+            self.target_folder_path.tooltip = path
             self.target_folder_path.update()
             self.save_config()
             

@@ -89,10 +89,11 @@ class ResourceSync:
         except Exception as e:
             print(f"Failed to save config: {e}")
     
-    def on_minecraft_path_picked(self, e: ft.FilePickerResultEvent):
-        if e.path:
-            self.minecraft_path.value = e.path
-            self.minecraft_path.tooltip = e.path
+    async def on_minecraft_path_picked(self, e: ft.Event[ft.Button]):
+        path = await ft.FilePicker().get_directory_path()
+        if path is not None:
+            self.minecraft_path.value = path
+            self.minecraft_path.tooltip = path
             self.minecraft_path.update()
             self.save_config()
 
@@ -110,9 +111,8 @@ class ResourceSync:
             tooltip=self.config.get("minecraft_path", ""),
             on_change=on_path_change,
         )
-        self.minecraft_path_picker = ft.FilePicker(on_result=self.on_minecraft_path_picked)
-        
-        minecraft_browse_btn = ft.ElevatedButton("Browse", on_click=lambda _: self.minecraft_path_picker.get_directory_path())
+       
+        minecraft_browse_btn = ft.Button("Browse", on_click=self.on_minecraft_path_picked)
         
         self.entries_column = ft.Column(spacing=10)
         
@@ -120,12 +120,11 @@ class ResourceSync:
             self.add_entry_row(entry, update_ui=False)
 
         add_btn = ft.ElevatedButton("Reload List", icon=ft.Icons.REFRESH, on_click=self.reload_list)
-        self.sync_button = ft.ElevatedButton("Sync Now", on_click=self.run_sync)
+        self.sync_button = ft.Button("Sync Now", on_click=self.run_sync)
 
         # Main layout
         return ft.Column(
             [
-                self.minecraft_path_picker,
                 ft.Row([self.minecraft_path, minecraft_browse_btn]),
                 ft.Row([
                     ft.Card(

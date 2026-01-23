@@ -46,17 +46,17 @@ def main(page: ft.Page):
             make_section(
                 "Datapack Zipper",
                 datapack_module.create_ui(),
-                ft.Icon(name=ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
+                ft.Icon(ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
             ),
             make_section(
                 "Sync Resourcepack",
                 sync_module.create_ui(),
-                ft.Icon(name=ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
+                ft.Icon(ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
             )
         ])
     )
     
-    
+"""
     # Calculate the sum height of all objects on the page
     total_height = 0
     for control in page.controls:
@@ -71,6 +71,7 @@ def main(page: ft.Page):
 
     page.window.min_height = total_height + 40  # Add window padding
     page.window.height = page.window.min_height
+"""
 
 if __name__ == "__main__":
     ft.app(target=main)
