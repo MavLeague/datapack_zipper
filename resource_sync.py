@@ -160,11 +160,12 @@ class ResourceSync:
             self.save_config()
             
         def toggle_pause(e):
-            row.data = not row.data
-            e.control.icon = ft.Icons.PLAY_ARROW if row.data else ft.Icons.PAUSE
-            e.control.tooltip = "Resume Sync" if row.data else "Pause Sync"
-            e.control.update()
-            self.save_config()
+            if not self.syncronizing:
+                row.data = not row.data
+                e.control.icon = ft.Icons.PLAY_ARROW if row.data else ft.Icons.PAUSE
+                e.control.tooltip = "Resume Sync" if row.data else "Pause Sync"
+                e.control.update()
+                self.save_config()
 
         action_btn = ft.IconButton(ft.Icons.PLAY_ARROW if paused else ft.Icons.PAUSE, tooltip="Resume Sync" if paused else "Pause Sync", on_click=toggle_pause, key="pause")
         delete_btn = ft.IconButton(ft.Icons.DELETE, tooltip="Delete", on_click=delete_entry)
@@ -192,6 +193,8 @@ class ResourceSync:
         
     
     def add_list2manager(self):
+        
+        self.manager.clear()
         
         datapack_folder = os.path.join(self.minecraft_path.value, "datapacks")
         resourcepack_folder = os.path.join(self.minecraft_path.value, "resourcepack")
@@ -223,19 +226,26 @@ class ResourceSync:
     def run_sync(self, e):
                 
         if not self.syncronizing:
-            self.syncronizing = True
-            self.sync_button.text = "Stop Sync"
-            self.sync_button.update()
-            
-            print("--- Running Sync ---")
-            
-            self.add_list2manager()
-            self.manager.start()
+            try:
+                self.syncronizing = True
+                self.sync_button.content = "Stop Sync"
+                self.sync_button.update()
+                
+                print("--- Running Sync ---")
+                
+                self.add_list2manager()
+                self.manager.start()
+                
+            except Exception as error:
+                print(f"Error: {error}")
+                e.page.snack_bar = ft.SnackBar(ft.Text(f"Error: {error}"))
+                e.page.snack_bar.open = True
+                e.page.update()
             
             
         else:
             self.syncronizing = False
-            self.sync_button.text = "Sync Now"
+            self.sync_button.content = "Sync Now"
             self.sync_button.update()
             
             print("--- Stopping Sync ---")
@@ -248,4 +258,4 @@ def main(page: ft.Page):
     page.add(comp.create_ui())
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.run(main)

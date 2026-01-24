@@ -182,3 +182,12 @@ class SyncManager:
         self.observer.stop()
         self.observer.join()
         print("Sync Manager stopped.")
+        # Re-initialize observer to allow restarting
+        self.observer = Observer()
+        self.watches.clear()
+        
+    def clear(self):
+        """Clears watchlist"""
+        self.observer.unschedule_all()
+        self.watches.clear()
+    
