@@ -179,6 +179,8 @@ class DatapackZipper:
                 label="Version Macro", 
                 value=self.config.get("version_macro", ""),
                 hint_text="e.g. command %s",
+                width=600,
+                multiline=True,
                 on_change=on_macro_change
             )
             
@@ -242,6 +244,7 @@ class DatapackZipper:
                 e.page.update()
 
             dlg = ft.AlertDialog(
+                modal=True,
                 title=ft.Text("Version Configuration"),
                 content=ft.Container(
                     width=600,
@@ -267,10 +270,11 @@ class DatapackZipper:
                     ft.TextButton("Cancel", on_click=close),
                     ft.TextButton("Save", on_click=save_close),
                 ],
+                actions_alignment=ft.MainAxisAlignment.END,
+                on_dismiss=lambda e: print("Dialog closed"),
             )
             
-            e.page.dialog = dlg
-            dlg.open = True
+            e.page.show_dialog(dlg)
             e.page.update()
             print("Config dialog opened.")
         except Exception as ex:
@@ -464,4 +468,4 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.run(main)
