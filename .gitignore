@@ -1,6 +1,5 @@
 # Program related stuff
 config.json
-/build
 test_minecraft_folder/
 test.py
 
