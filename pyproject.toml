@@ -1,14 +1,15 @@
 [project]
-name = "datapack-zipper"
+name = "datapack_zipper"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
-    { name = "Flet developer", email = "you@example.com" }
+    { name = "Mav League" }
 ]
 dependencies = [
-    "flet>=0.80.3"
+    "flet>=0.80.3",
+    "watchdog"
 ]
 
 [dependency-groups]
@@ -19,10 +20,10 @@ dev = [
 ]
 
 [tool.flet]
-org = "com.mycompany"
-product = "datapack-zipper"
-company = "Flet"
-copyright = "Copyright (C) 2023-2026 by Flet"
+org = "com.mavleague"
+product = "datapack_zipper"
+company = "Mav League"
+copyright = "Copyright (C) 2025-2026 by Mav League"
 
 [tool.flet.app]
 path = "src"
