@@ -1,6 +1,9 @@
 import flet as ft
 from datapack_zipper import DatapackZipper
 from resource_sync import ResourceSync
+from modules.console import ConsoleOutput
+import webbrowser
+import sys
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
@@ -34,9 +37,30 @@ def make_section(title, content, icon=None, width=None, height=None):
 
 def main(page: ft.Page):
     page.title = "Datapack Manager"
+    
+    # Initialize console and hide
+    console = ConsoleOutput()
+    console.visible = False
+    sys.stdout = console # Redirect print output
+
+    def open_info(e):
+        def toggle_console(e):
+            console.visible = not console.visible
+            console.update()
+
+        info = ft.AlertDialog(
+            modal=False,
+            title=ft.Text("About this Program"),
+            content=ft.Column([
+                ft.Row([ft.Icon(ft.Icons.INFO),ft.Text(f"Flet Version: {ft.__version__}")]),
+                ft.Row([ft.Icon(ft.Icons.BUG_REPORT),ft.Button(f"Report Issue", on_click=lambda _: webbrowser.open("https://github.com/MavLeague/datapack_zipper/issues", new=0, autoraise=True))]),
+                ft.Row([ft.Icon(ft.Icons.CODE),ft.Button("Toggle Console", on_click=toggle_console)])
+            ], height=150)
+        )
+        page.show_dialog(info)
 
     # Other GUI parts could be here
-    header = ft.Text("Datapack Manager", size=24, weight=ft.FontWeight.BOLD)
+    header = ft.Row([ft.IconButton(ft.Icons.INFO, on_click=open_info),ft.Text("Datapack Manager", size=24, weight=ft.FontWeight.BOLD)])
     datapack_module = DatapackZipper()
     sync_module = ResourceSync()
     
@@ -53,7 +77,8 @@ def main(page: ft.Page):
                 sync_module.create_ui(),
                 ft.Icon(ft.Icons.FOLDER_ZIP,color=ft.Colors.WHITE)
             )
-        ])
+        ]),
+        console
     )
     
 """
