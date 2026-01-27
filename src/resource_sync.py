@@ -119,7 +119,7 @@ class ResourceSync:
         for entry in self.config.get("sync_entries", []):
             self.add_entry_row(entry, update_ui=False)
 
-        add_btn = ft.ElevatedButton("Reload List", icon=ft.Icons.REFRESH, on_click=self.reload_list)
+        add_btn = ft.Button("Reload List", icon=ft.Icons.REFRESH, on_click=self.reload_list)
         self.sync_button = ft.Button("Sync Now", on_click=self.run_sync)
 
         # Main layout

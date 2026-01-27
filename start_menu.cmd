@@ -1,1 +1,1 @@
-python "main_app.py"
+flet run
