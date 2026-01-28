@@ -3,7 +3,7 @@ name: Build and Release Flet App
 on:
   push:
     tags:
-      - "v*"  # Triggers automatically when you push a tag like "v1.0.0"
+      - "v*"  # Triggers automatically on tags like v1.0.0
 
 permissions:
   contents: write
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12" # 3.12 is currently stable for Flet
+          python-version: "3.12"
           cache: "pip"
 
       # --- Linux Dependencies ---
@@ -47,31 +47,27 @@ jobs:
       # 1. WINDOWS BUILD
       - name: Build Windows
         if: runner.os == 'Windows'
-        # --product sets the EXE name and window title
+        # IMPORTANT: This fixes the UnicodeEncodeError ('charmap' codec failed)
+        env:
+          PYTHONIOENCODING: utf-8
         run: flet build windows --product "datapack_zipper"
 
-
-      # Create Windows Installer (Inno Setup)
+      # Install Inno Setup (ONLY ON WINDOWS)
       - name: Setup Inno Setup
-        run: |
-          choco install innosetup -y
+        if: runner.os == 'Windows'
+        run: choco install innosetup -y
 
-      - name: Build Installer with Inno Setup
-        shell: powershell
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers/setup.iss
-
-
+      # Generate and Compile Installer Script (ONLY ON WINDOWS)
       - name: Generate and Run Installer Script
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          # We dynamically generate the Installer Script (.iss) here
+          # Dynamically create the Inno Setup Script
           $AppName = "datapack_zipper"
-          # Extract version from tag (removes the 'v')
+          # Extract version from tag (remove 'v')
           $Version = "${{ github.ref_name }}" -replace "v",""
           
-          # Define the Inno Setup script content
+          # Define the Inno Setup configuration content
           $Content = @"
           [Setup]
           AppName=$AppName
@@ -97,11 +93,11 @@ jobs:
           Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
           "@
           
-          # Save the script to a file
+          # Save content to file
           $Content | Out-File -FilePath "setup_script.iss" -Encoding ASCII
           
-          # Run the Inno Setup Compiler (ISCC)
-          ISCC setup_script.iss
+          # Compile using ISCC (Path set by Chocolatey)
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup_script.iss
 
       # 2. MACOS BUILD
       - name: Build macOS
@@ -126,7 +122,7 @@ jobs:
           cd build/linux
           tar -czvf ../../datapack_zipper_Linux_${{ github.ref_name }}.tar.gz *
 
-      # --- Upload Artifacts (Handover to Release Job) ---
+      # --- Upload Artifacts ---
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
