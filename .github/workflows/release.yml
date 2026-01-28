@@ -50,10 +50,17 @@ jobs:
         # --product sets the EXE name and window title
         run: flet build windows --product "datapack_zipper"
 
+
       # Create Windows Installer (Inno Setup)
       - name: Setup Inno Setup
-        if: runner.os == 'Windows'
-        uses: Minionguyjosh/setup-inno-setup@v1.0.1
+        run: |
+          choco install innosetup -y
+
+      - name: Build Installer with Inno Setup
+        shell: powershell
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers/setup.iss
+
 
       - name: Generate and Run Installer Script
         if: runner.os == 'Windows'
