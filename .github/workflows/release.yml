@@ -50,7 +50,7 @@ jobs:
         # IMPORTANT: This fixes the UnicodeEncodeError ('charmap' codec failed)
         env:
           PYTHONIOENCODING: utf-8
-        run: flet build windows --product "datapack_zipper"
+        run: flet build windows --product "datapack_zipper" --yes
 
       # Install Inno Setup (ONLY ON WINDOWS)
       - name: Setup Inno Setup
@@ -102,7 +102,7 @@ jobs:
       # 2. MACOS BUILD
       - name: Build macOS
         if: runner.os == 'macOS'
-        run: flet build macos --product "datapack_zipper"
+        run: flet build macos --product "datapack_zipper" --yes
 
       - name: Package macOS (Zip)
         if: runner.os == 'macOS'
@@ -114,7 +114,7 @@ jobs:
       # 3. LINUX BUILD
       - name: Build Linux
         if: runner.os == 'Linux'
-        run: flet build linux --product "datapack_zipper"
+        run: flet build linux --product "datapack_zipper" --yes
 
       - name: Package Linux (Tar.gz)
         if: runner.os == 'Linux'
