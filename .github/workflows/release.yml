@@ -141,6 +141,8 @@ jobs:
           prerelease: false
           name: Release ${{ github.ref_name }}
           files: |
+            artifacts/**/*.exe
             artifacts/*.exe
+            artifacts/**/*.zip
             artifacts/*.zip
             artifacts/*.tar.gz
