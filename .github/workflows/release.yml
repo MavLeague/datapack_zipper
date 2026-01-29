@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
 
     steps:
       - name: Checkout Code
@@ -99,19 +99,7 @@ jobs:
           # Compile using ISCC (Path set by Chocolatey)
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup_script.iss
 
-      # 2. MACOS BUILD
-      - name: Build macOS
-        if: runner.os == 'macOS'
-        run: flet build macos --product "datapack_zipper" --yes
-
-      - name: Package macOS (Zip)
-        if: runner.os == 'macOS'
-        run: |
-          cd build/macos
-          # Zip the .app bundle so it can be downloaded easily
-          zip -r ../../datapack_zipper_macOS_${{ github.ref_name }}.zip "datapack_zipper.app"
-
-      # 3. LINUX BUILD
+      # 2. LINUX BUILD
       - name: Build Linux
         if: runner.os == 'Linux'
         run: flet build linux --product "datapack_zipper" --yes
