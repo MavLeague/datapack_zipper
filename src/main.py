@@ -4,6 +4,7 @@ from resource_sync import ResourceSync
 from modules.console import ConsoleOutput
 import webbrowser
 import sys
+import toml
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
@@ -38,6 +39,10 @@ def make_section(title, content, icon=None, width=None, height=None):
 def main(page: ft.Page):
     page.title = "Datapack Manager"
     
+    # load data from toml
+    config = toml.load("pyproject.toml")
+    v_name = config["project"]["version"]
+    
     # Initialize console and hide
     console = ConsoleOutput()
     console.visible = False
@@ -52,7 +57,7 @@ def main(page: ft.Page):
             modal=False,
             title=ft.Text("About this Program"),
             content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.INFO),ft.Text(f"Flet Version: {ft.__version__}\nCurrent Build: 000")]),
+                ft.Row([ft.Icon(ft.Icons.INFO),ft.Text(f"Flet Version: {ft.__version__}\nCurrent Build: {v_name}")]),
                 ft.Row([ft.Icon(ft.Icons.BUG_REPORT),ft.Button(f"Report Issue", on_click=lambda _: webbrowser.open("https://github.com/MavLeague/datapack_zipper/issues", new=0, autoraise=True))]),
                 ft.Row([ft.Icon(ft.Icons.CODE),ft.Button("Toggle Console", on_click=toggle_console)])
             ], height=150)
