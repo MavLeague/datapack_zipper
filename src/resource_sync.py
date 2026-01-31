@@ -197,7 +197,7 @@ class ResourceSync:
         self.manager.clear()
         
         datapack_folder = os.path.join(self.minecraft_path.value, "datapacks")
-        resourcepack_folder = os.path.join(self.minecraft_path.value, "resourcepack")
+        resourcepack_folder = os.path.join(self.minecraft_path.value, "resourcepacks")
         
         for row_control in self.entries_column.controls:
             if isinstance(row_control, ft.Row):
