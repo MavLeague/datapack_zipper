@@ -27,6 +27,24 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      # --- insert version info ---
+      - name: Inject Version
+        shell: python
+        run: |
+          import re
+          
+          version = "${{ github.ref_name }}"
+          file_path = "main.py"
+          
+          with open(file_path, "r", encoding="utf-8") as f:
+              lines = f.readlines()
+          
+          if len(lines) >= 9:
+              lines[8] = re.sub(r'(["\']).*?\1', f"\\g<1>{version}\\g<1>", lines[8], count=1)
+              with open(file_path, "w", encoding="utf-8") as f:
+                  f.writelines(lines)
+              print(f"Updated line 9 in {file_path} with version {version}")
+
       # --- Linux Dependencies ---
       - name: Install Linux System Dependencies
         if: runner.os == 'Linux'

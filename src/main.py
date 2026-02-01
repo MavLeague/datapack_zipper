@@ -4,7 +4,9 @@ from resource_sync import ResourceSync
 from modules.console import ConsoleOutput
 import webbrowser
 import sys
-import toml
+
+# set version variable
+v_name = "0.0.3"
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
@@ -38,10 +40,7 @@ def make_section(title, content, icon=None, width=None, height=None):
 
 def main(page: ft.Page):
     page.title = "Datapack Manager"
-    
-    # load data from toml
-    config = toml.load("pyproject.toml")
-    v_name = config["project"]["version"]
+
     
     # Initialize console and hide
     console = ConsoleOutput()
