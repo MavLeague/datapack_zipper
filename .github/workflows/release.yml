@@ -34,7 +34,7 @@ jobs:
           import re
           
           version = "${{ github.ref_name }}"
-          file_path = "main.py"
+          file_path = "src/main.py"
           
           with open(file_path, "r", encoding="utf-8") as f:
               lines = f.readlines()
