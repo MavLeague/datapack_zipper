@@ -6,7 +6,7 @@ import webbrowser
 import sys
 
 # set version variable
-v_name = "0.0.3"
+v_name = "test-build"
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
