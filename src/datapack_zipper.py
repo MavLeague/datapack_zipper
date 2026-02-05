@@ -100,6 +100,8 @@ class DatapackZipper:
         self.raw_config = {}
         self.config = {}
         self.load_config()
+        
+        self.file_picker = ft.FilePicker()
 
     def load_config(self):
         try:
@@ -363,8 +365,13 @@ class DatapackZipper:
             spacing=15,
         )
         
+    def did_mount(self):
+        self.page.overlay.append(self.file_picker)
+        self.page.update()
+        
+    
     async def on_root_folder_picked(self, e: ft.Event[ft.Button]):
-        path = await ft.FilePicker().get_directory_path()
+        path = await self.file_picker.get_directory_path()
         if path is not None:
             self.root_folder_path.value = path
             self.root_folder_path.tooltip = path
@@ -372,7 +379,7 @@ class DatapackZipper:
             self.save_config()
             
     async def on_target_folder_picked(self, e: ft.Event[ft.Button]):
-        path = await ft.FilePicker().get_directory_path()
+        path = await self.file_picker.get_directory_path()
         if path is not None:
             self.target_folder_path.value = path
             self.target_folder_path.tooltip = path

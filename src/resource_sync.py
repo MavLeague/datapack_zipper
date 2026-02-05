@@ -33,6 +33,7 @@ class ResourceSync:
         
         self.manager = SyncManager()
         self.syncronizing = False
+        self.file_picker = ft.FilePicker()
 
 
     def load_config(self):
@@ -90,7 +91,11 @@ class ResourceSync:
             print(f"Failed to save config: {e}")
     
     async def on_minecraft_path_picked(self, e: ft.Event[ft.Button]):
-        path = await ft.FilePicker().get_directory_path()
+        if self.file_picker not in e.page.overlay:
+            e.page.overlay.append(self.file_picker)
+            await e.page.update_async()
+
+        path = await self.file_picker.get_directory_path()
         if path is not None:
             self.minecraft_path.value = path
             self.minecraft_path.tooltip = path
