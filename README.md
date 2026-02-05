@@ -1,7 +1,7 @@
-# datapack_zipper
-This simple python script zips your Minecraft data- and resourcepacks!
+# Datapack Manager
+This Programm is a nice assistant when creating datapacks for Minecraft. It can zip your Packs for release as well as synchronize your files directly into your minecraft instance to test it in realtime!
 
-Some parts of this code are vibe coded. If you can find some mistakes, bugs or just bad programming please let me know, I'm still just a rookie:D
+If you can find some mistakes, bugs or just bad programming please let me know, I'm still just a rookie:D
 
 ## Example configuration
 <img width="911" height="525" alt="image" src="https://github.com/user-attachments/assets/e736445f-9d95-414f-b009-c3303b1018f3" />
