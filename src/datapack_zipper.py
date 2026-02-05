@@ -345,8 +345,8 @@ class DatapackZipper:
 
         create_button = ft.Button("Zip Datapack!", on_click=self.create_zip)
         version_button = ft.Button("Insert Version", on_click=self.insert_version_trigger)
-        root_choose_button = ft.Button("Browse", on_click=self.on_root_folder_picked)
-        target_choose_button = ft.Button("Browse", on_click=self.on_target_folder_picked)
+        root_choose_button = ft.IconButton(ft.Icons.FOLDER_OPEN, on_click=self.on_root_folder_picked)
+        target_choose_button = ft.IconButton(ft.Icons.FOLDER_OPEN, on_click=self.on_target_folder_picked)
 
         # Main layout
         return ft.Column(

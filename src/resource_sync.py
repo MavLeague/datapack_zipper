@@ -35,7 +35,10 @@ class ResourceSync:
         self.syncronizing = False
         self.file_picker = ft.FilePicker()
 
-
+    def did_mount(self):
+        self.page.overlay.append(self.file_picker)
+        self.page.update()
+    
     def load_config(self):
         try:
             if os.path.exists(self.config_path):
@@ -91,10 +94,6 @@ class ResourceSync:
             print(f"Failed to save config: {e}")
     
     async def on_minecraft_path_picked(self, e: ft.Event[ft.Button]):
-        if self.file_picker not in e.page.overlay:
-            e.page.overlay.append(self.file_picker)
-            await e.page.update_async()
-
         path = await self.file_picker.get_directory_path()
         if path is not None:
             self.minecraft_path.value = path
@@ -117,7 +116,7 @@ class ResourceSync:
             on_change=on_path_change,
         )
        
-        minecraft_browse_btn = ft.Button("Browse", on_click=self.on_minecraft_path_picked)
+        minecraft_browse_btn = ft.IconButton(ft.Icons.FOLDER_OPEN, on_click=self.on_minecraft_path_picked)
         
         self.entries_column = ft.Column(spacing=10)
         
