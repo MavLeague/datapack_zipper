@@ -2,60 +2,7 @@ import flet as ft
 import os
 import zipfile
 import json
-
-# Zipping functions
-def add_folder_to_zip(zf: zipfile.ZipFile, folder_path: str, arc_folder_name: str = None, allowed_extensions: list = None):
-
-    if arc_folder_name is None:
-        arc_folder_name = os.path.basename(folder_path)
-    
-    print(f"Adding folder '{folder_path}' as '{arc_folder_name}'...")
-    
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if allowed_extensions:
-                _, ext = os.path.splitext(file)
-                if ext.lower() not in allowed_extensions:
-                    continue
-
-            file_path = os.path.join(root, file)
-            
-            relative_path = os.path.relpath(file_path, folder_path)
-            
-            arcname = os.path.join(arc_folder_name, relative_path)
-            
-            print(f"  > {file_path}  ->  {arcname}")
-            zf.write(file_path, arcname=arcname)
-
-def verify_zip(zip_filename: str):
-    """Prints the contents of the created zip file for verification."""
-    print(f"\n--- Verifying contents of '{zip_filename}' ---")
-    try:
-        with zipfile.ZipFile(zip_filename, 'r') as zf:
-            zf.printdir()
-    except FileNotFoundError:
-        print(f"Error: '{zip_filename}' not found.")
-    except zipfile.BadZipFile:
-        print(f"Error: '{zip_filename}' is not a valid zip file.")
-        
-def get_version_folders(pack_path: str):
-    """Extracts version folders from the pack.mcmeta file."""
-    version_folders = []
-    try:
-        with open(pack_path, "r", encoding="utf-8") as f:
-            content = json.load(f)
-            
-            overlays = content.get("overlays", {})
-            entries = overlays.get("entries", [])
-            
-            for entry in entries:
-                directory = entry.get("directory")
-                if directory:
-                    version_folders.append(directory)
-                
-    except Exception as e:
-        print(f"Error reading pack.mcmeta: {e} has no overlays?")
-    return version_folders
+from modules.zipper import PackZipper
 
 def insert_version(version_text: str, version_macro: str, reload_functions: list, datapack_path: str):
     parts = version_text.split(";")
@@ -101,6 +48,7 @@ class DatapackZipper:
         self.config = {}
         self.load_config()
         
+        self.zipper = PackZipper()
         self.file_picker = ft.FilePicker()
 
     def load_config(self):
@@ -425,18 +373,8 @@ class DatapackZipper:
 
         datapack_zip_filename = os.path.join(target_folder, f"{datapack_name}.zip")
         
-        with zipfile.ZipFile(datapack_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
-            add_folder_to_zip(zf, os.path.join(root_folder, "data"), arc_folder_name="data", allowed_extensions=allowed_extensions)
-            
-            # add version folders from overlays
-            version_folders = get_version_folders(os.path.join(root_folder, "pack.mcmeta"))
-            if not version_folders == []:
-                for folder in version_folders:
-                    add_folder_to_zip(zf, os.path.join(root_folder, folder, "data"), arc_folder_name=f"{folder}/data", allowed_extensions=allowed_extensions)
-            
-            # write pack.mcmeta and icon
-            zf.write(os.path.join(root_folder, "pack.mcmeta"), arcname="pack.mcmeta")
-            zf.write(os.path.join(root_folder, "pack.png"), arcname="pack.png")
+        self.zipper.zip_datapack(root_folder, datapack_zip_filename, allowed_extensions=allowed_extensions)
+
         # Save current settings after creating the zip
         self.save_config()
         print(f"Datapack zip created: {datapack_zip_filename}")
@@ -444,26 +382,8 @@ class DatapackZipper:
         if self.has_rpack_checkbox.value:
             resource_zip_filename = os.path.join(target_folder, f"{datapack_name}_resources.zip")
             
-            with zipfile.ZipFile(resource_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
-                add_folder_to_zip(zf, os.path.join(root_folder, "assets"), arc_folder_name="assets", allowed_extensions=allowed_extensions)
-                
-                # Choose which resource pack meta file to include (try both valid names)
-                for candidate in ("resource_pack.mcmeta", "pack_resourcepack.mcmeta"):
-                    candidate_path = os.path.join(root_folder, candidate)
-                    if os.path.exists(candidate_path):
-                        # add version folders from overlays
-                        version_folders = get_version_folders(candidate_path)
-                        if not version_folders == []:
-                            for folder in version_folders:
-                                add_folder_to_zip(zf, os.path.join(root_folder, folder, "assets"), arc_folder_name=f"{folder}/assets", allowed_extensions=allowed_extensions)
-                        
-                        # write pack.mcmeta
-                        zf.write(candidate_path, arcname="pack.mcmeta")
-                        break
-                else:
-                    print("No resource pack metadata file found (tried resource_pack.mcmeta, pack_resourcepack.mcmeta).")
-                zf.write(os.path.join(root_folder, "pack.png"), arcname="pack.png")
-                
+            self.zipper.zip_resourcepack(root_folder, resource_zip_filename, allowed_extensions=allowed_extensions)
+
             print(f"resource pack zip created: {resource_zip_filename}")
             # Save settings as well
             self.save_config()
