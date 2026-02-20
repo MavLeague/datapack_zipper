@@ -3,27 +3,32 @@ import os
 import json
 from modules.zipper import PackZipper
 
-def insert_to_function(injection_text: str, global_macro: str, reload_functions: list, datapack_path: str):
+def insert_to_function(injection_text: str, global_macro: str, reload_functions: list, datapack_path: str, log_callback=None):
+    def log(message):
+        print(message)
+        if log_callback:
+            log_callback(message)
+
     parts = injection_text.split(";")
 
     for file_info in reload_functions:
         if file_info["macro"]:
             macro = file_info["macro"]
             if len(parts) != macro.count("%s"):
-                print(f"Error: Injection Text has {len(parts)} parts, but Macro for {file_info["function"]} expects {macro.count('%s')}.")
+                log(f"Error: Injection Text has {len(parts)} parts, but Macro for {file_info['function']} expects {macro.count('%s')}.")
                 continue
         else:
             macro = global_macro
             if len(parts) != macro.count("%s"):
-                print(f"Error: Injection Text has {len(parts)} parts, but Global Macro expects {macro.count('%s')}.")
+                log(f"Error: Injection Text has {len(parts)} parts, but Global Macro expects {macro.count('%s')}.")
                 continue
             
 
         injection_code = macro % tuple(parts)
-        print(f"Generated Command: {injection_code}")
+        log(f"Generated Command: {injection_code}")
         
         if ":" not in file_info["function"]:
-            print(f"Skipping invalid function format: {file_info['function']}")
+            log(f"Skipping invalid function format: {file_info['function']}")
             continue
 
         namespace, function_file = file_info["function"].split(":", 1)
@@ -40,11 +45,11 @@ def insert_to_function(injection_text: str, global_macro: str, reload_functions:
                 
                 with open(full_path, "w", encoding="utf-8") as f:
                     f.writelines(lines)
-                print(f"Updated {full_path} at line {file_info['line']}")
+                log(f"Updated {full_path} at line {file_info['line']}")
             else:
-                print(f"Line {file_info['line']} out of bounds in {full_path}")
+                log(f"Line {file_info['line']} out of bounds in {full_path}")
         else:
-            print(f"File not found: {full_path}")
+            log(f"File not found: {full_path}")
 
 
 # This class defines your reusable GUI component
@@ -145,7 +150,7 @@ class DatapackZipper:
             macro_field = ft.TextField(
                 label="Global Macro", 
                 value=temp_global_macro[0],
-                hint_text="e.g. command %s",
+                hint_text="e.g. execute as @a run say %s",
                 width=600,
                 multiline=True,
                 on_change=on_macro_change
@@ -389,15 +394,36 @@ class DatapackZipper:
             self.save_config()
             
     def inject_function_trigger(self, e):
+        
+        feed = ft.Column([ft.Text("Inserting into Functions...")], height=150, width=600, scroll=ft.ScrollMode.AUTO)
+        
+        def close_dlg(e):
+            info_popup.open = False
+            e.page.update()
+
+        info_popup = ft.AlertDialog(
+            title=ft.Text("Inserted"),
+            content=feed,
+            actions=[ft.TextButton("Okay", on_click=close_dlg)],
+            modal=True,
+        )
+        
+        e.page.show_dialog(info_popup)
+        e.page.update()
+        
         print("--- Injecting text to pack ---\n")
         if self.injection_checkbox.value:
             if not self.injection_text_field.value:
-                e.page.snack_bar = ft.SnackBar(ft.Text("Please enter injection text."))
-                e.page.snack_bar.open = True
+                feed.controls.append(ft.Text("Error: Please enter injection text."))
+                info_popup.update()
                 e.page.update()
                 return
             
-            insert_to_function(self.injection_text_field.value, self.config.get("macro"), self.config.get("reload_function"), self.root_folder_path.value)
+            def log_to_feed(msg):
+                feed.controls.append(ft.Text(msg))
+                info_popup.update()
+
+            insert_to_function(self.injection_text_field.value, self.config.get("macro"), self.config.get("reload_function"), self.root_folder_path.value, log_callback=log_to_feed)
     
     def create_zip(self, e):
         
@@ -420,22 +446,22 @@ class DatapackZipper:
         print("--- Creating datapack zip... ---\n")
         root_folder = self.root_folder_path.value
         if not root_folder:
-            e.page.snack_bar = ft.SnackBar(ft.Text("Please choose a datapack folder."))
-            e.page.snack_bar.open = True
+            feed.controls.append(ft.Text("Error: Please choose a datapack folder."))
+            info_popup.update()
             e.page.update()
             return
         
         target_folder = self.target_folder_path.value
         if not target_folder:
-            e.page.snack_bar = ft.SnackBar(ft.Text("Please choose an export folder."))
-            e.page.snack_bar.open = True
+            feed.controls.append(ft.Text("Error: Please choose an export folder."))
+            info_popup.update()
             e.page.update()
             return
         
         datapack_name = self.datapack_name.value
         if not datapack_name:
-            e.page.snack_bar = ft.SnackBar(ft.Text("Please enter a datapack name."))
-            e.page.snack_bar.open = True
+            feed.controls.append(ft.Text("Error: Please enter a datapack name."))
+            info_popup.update()
             e.page.update()
             return
         
@@ -452,6 +478,7 @@ class DatapackZipper:
 
         feed.controls.append(ft.Text(f"Datapack zip created: {datapack_zip_filename}"))
         info_popup.update()
+        e.page.update()
 
         if self.has_rpack_checkbox.value:
             feed.controls.append(ft.Text("Creating resource pack zip..."))
@@ -463,6 +490,7 @@ class DatapackZipper:
             print(f"Resource pack zip created: {resource_zip_filename}")
             feed.controls.append(ft.Text(f"Resource pack zip created: {resource_zip_filename}"))
             info_popup.update()
+            e.page.update()
 
             # Save settings as well
             self.save_config()
