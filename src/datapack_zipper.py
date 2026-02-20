@@ -28,7 +28,7 @@ def insert_to_function(injection_text: str, global_macro: str, reload_functions:
 
         namespace, function_file = file_info["function"].split(":", 1)
         # Construct path: root/data/namespace/functions/file
-        full_path = os.path.join(datapack_path, "data", namespace, "function", function_file)
+        full_path = os.path.join(datapack_path, "data", namespace, "function", function_file + ".mcfunction")
         
         if os.path.exists(full_path):
             with open(full_path, "r", encoding="utf-8") as f:
@@ -96,7 +96,7 @@ class DatapackZipper:
             "enable_injection": (getattr(self, 'injection_checkbox', None) and self.injection_checkbox.value) or self.config.get("enable_injection", False),
             "injection_text": (getattr(self, 'injection_text_field', None) and self.injection_text_field.value) or self.config.get("injection_text", ""),
             "macro": self.config.get("macro", ""),
-            "reload_function": self.config.get("reload_function", [{"function": "my_pack:reload.mcfunction", "line": 1}]),
+            "reload_function": self.config.get("reload_function", [{"function": "my_pack:reload", "line": 1}]),
         }
         try:
             # Load existing raw config to preserve other project sections
@@ -213,7 +213,7 @@ class DatapackZipper:
                 if update_ui:
                     reload_list_col.update()
 
-            current_entries = self.config.get("reload_function", [{"function": "my_pack:reload.mcfunction", "line": 1, "macro": ""}])
+            current_entries = self.config.get("reload_function", [{"function": "my_pack:reload", "line": 1, "macro": ""}])
             if not isinstance(current_entries, list):
                 current_entries = []
                 
@@ -267,7 +267,7 @@ class DatapackZipper:
                             padding=5,
                             expand=True
                         ),
-                        ft.Text("Don't forget to provide a namespace!")
+                        ft.Text("Don't forget to provide a namespace! (Don't add .mcfunction)")
                     ])
                 ),
                 actions=[
@@ -400,6 +400,23 @@ class DatapackZipper:
             insert_to_function(self.injection_text_field.value, self.config.get("macro"), self.config.get("reload_function"), self.root_folder_path.value)
     
     def create_zip(self, e):
+        
+        feed = ft.Column([ft.Text("Creating datapack zip...")], height=150, scroll=ft.ScrollMode.AUTO)
+        
+        def close_dlg(e):
+            info_popup.open = False
+            e.page.update()
+
+        info_popup = ft.AlertDialog(
+            title=ft.Text("Zip Created"),
+            content=feed,
+            actions=[ft.TextButton("Okay", on_click=close_dlg)],
+            modal=True,
+        )
+        
+        e.page.show_dialog(info_popup)
+        e.page.update()
+        
         print("--- Creating datapack zip... ---\n")
         root_folder = self.root_folder_path.value
         if not root_folder:
@@ -433,12 +450,20 @@ class DatapackZipper:
         self.save_config()
         print(f"Datapack zip created: {datapack_zip_filename}")
 
+        feed.controls.append(ft.Text(f"Datapack zip created: {datapack_zip_filename}"))
+        info_popup.update()
+
         if self.has_rpack_checkbox.value:
+            feed.controls.append(ft.Text("Creating resource pack zip..."))
+            info_popup.update()
             resource_zip_filename = os.path.join(target_folder, f"{datapack_name}_resources.zip")
             
             self.zipper.zip_resourcepack(root_folder, resource_zip_filename, allowed_extensions=allowed_extensions)
 
-            print(f"resource pack zip created: {resource_zip_filename}")
+            print(f"Resource pack zip created: {resource_zip_filename}")
+            feed.controls.append(ft.Text(f"Resource pack zip created: {resource_zip_filename}"))
+            info_popup.update()
+
             # Save settings as well
             self.save_config()
 
