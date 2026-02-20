@@ -1,19 +1,27 @@
 import flet as ft
 import os
-import zipfile
 import json
 from modules.zipper import PackZipper
 
-def insert_version(version_text: str, version_macro: str, reload_functions: list, datapack_path: str):
-    parts = version_text.split(";")
-    if len(parts) != version_macro.count("%s"):
-        print(f"Error: version_text has {len(parts)} parts, but version_macro expects {version_macro.count('%s')}.")
-        return
+def insert_to_function(injection_text: str, global_macro: str, reload_functions: list, datapack_path: str):
+    parts = injection_text.split(";")
 
-    version_code = version_macro % tuple(parts)
-    print(f"Generated Command: {version_code}")
-    
     for file_info in reload_functions:
+        if file_info["macro"]:
+            macro = file_info["macro"]
+            if len(parts) != macro.count("%s"):
+                print(f"Error: Injection Text has {len(parts)} parts, but Macro for {file_info["function"]} expects {macro.count('%s')}.")
+                continue
+        else:
+            macro = global_macro
+            if len(parts) != macro.count("%s"):
+                print(f"Error: Injection Text has {len(parts)} parts, but Global Macro expects {macro.count('%s')}.")
+                continue
+            
+
+        injection_code = macro % tuple(parts)
+        print(f"Generated Command: {injection_code}")
+        
         if ":" not in file_info["function"]:
             print(f"Skipping invalid function format: {file_info['function']}")
             continue
@@ -28,7 +36,7 @@ def insert_version(version_text: str, version_macro: str, reload_functions: list
             
             # Replace line (Line number in config is 1-based)
             if 0 <= file_info["line"] - 1 < len(lines):
-                lines[file_info["line"] - 1] = version_code + "\n"
+                lines[file_info["line"] - 1] = injection_code + "\n"
                 
                 with open(full_path, "w", encoding="utf-8") as f:
                     f.writelines(lines)
@@ -85,10 +93,10 @@ class DatapackZipper:
             "root_folder_path": (getattr(self, 'root_folder_path', None) and self.root_folder_path.value) or self.config.get("root_folder_path", ""),
             "target_folder_path": (getattr(self, 'target_folder_path', None) and self.target_folder_path.value) or self.config.get("target_folder_path", ""),
             "has_rpack": (getattr(self, 'has_rpack_checkbox', None) and self.has_rpack_checkbox.value) or self.config.get("has_rpack", False),
-            "insert_version": (getattr(self, 'version_checkbox', None) and self.version_checkbox.value) or self.config.get("insert_version", False),
-            "version_text": (getattr(self, 'version_text', None) and self.version_text.value) or self.config.get("version_text", ""),
-            "version_macro": (getattr(self, 'version_macro', None) and self.version_macro.value) or self.config.get("version_macro", ""),
-            "reload_function": (getattr(self, 'reload_function', None) and self.reload_function.value) or self.config.get("reload_function", [{"function": "reload.mcfunction", "line": 1}]),
+            "enable_injection": (getattr(self, 'injection_checkbox', None) and self.injection_checkbox.value) or self.config.get("enable_injection", False),
+            "injection_text": (getattr(self, 'injection_text_field', None) and self.injection_text_field.value) or self.config.get("injection_text", ""),
+            "macro": self.config.get("macro", ""),
+            "reload_function": self.config.get("reload_function", [{"function": "my_pack:reload.mcfunction", "line": 1}]),
         }
         try:
             # Load existing raw config to preserve other project sections
@@ -111,23 +119,32 @@ class DatapackZipper:
     
     def open_config_dialog(self, e):
         try:
+            temp_global_macro = [self.config.get("macro", "")]
+            selected_row = [None]
+
             def get_macro_hint(val):
                 count = val.count("%s") if val else 0
-                return f"Use '%s' as placeholder. Use ; as a divider in the Version Input when using multiple. Current count: {count}"
+                return f"Use '%s' as placeholder. Use ; as a divider in the Injection Input when using multiple. Current count: {count}"
 
             macro_hint = ft.Text(
-                value=get_macro_hint(self.config.get("version_macro", "")),
+                value=get_macro_hint(temp_global_macro[0]),
                 size=12,
                 color=ft.Colors.GREY
             )
 
             def on_macro_change(e):
-                macro_hint.value = get_macro_hint(e.control.value)
+                val = e.control.value
+                macro_hint.value = get_macro_hint(val)
                 macro_hint.update()
+                
+                if selected_row[0] is None:
+                    temp_global_macro[0] = val
+                else:
+                    selected_row[0].data["macro"] = val
 
             macro_field = ft.TextField(
-                label="Version Macro", 
-                value=self.config.get("version_macro", ""),
+                label="Global Macro", 
+                value=temp_global_macro[0],
                 hint_text="e.g. command %s",
                 width=600,
                 multiline=True,
@@ -136,32 +153,67 @@ class DatapackZipper:
             
             reload_list_col = ft.Column(spacing=5, scroll=ft.ScrollMode.AUTO)
             
+            def update_edit_icons():
+                for row in reload_list_col.controls:
+                    if isinstance(row, ft.Row):
+                        btn = row.controls[0]
+                        if row == selected_row[0]:
+                            btn.icon = ft.Icons.EDIT
+                        else:
+                            btn.icon = ft.Icons.EDIT_OFF
+                reload_list_col.update()
+
+            def select_entry(row):
+                if selected_row[0] == row:
+                    # Deselect
+                    selected_row[0] = None
+                    macro_field.label = "Global Macro"
+                    macro_field.value = temp_global_macro[0]
+                else:
+                    # Select
+                    selected_row[0] = row
+                    macro_field.label = "Entry Macro"
+                    macro_field.value = row.data.get("macro", "")
+                
+                macro_field.update()
+                macro_hint.value = get_macro_hint(macro_field.value)
+                macro_hint.update()
+                update_edit_icons()
+
             def delete_entry(row):
+                if selected_row[0] == row:
+                    selected_row[0] = None
+                    macro_field.label = "Global Macro"
+                    macro_field.value = temp_global_macro[0]
+                    macro_field.update()
+                    macro_hint.value = get_macro_hint(macro_field.value)
+                    macro_hint.update()
+
                 reload_list_col.controls.remove(row)
                 reload_list_col.update()
 
             def add_entry(data=None, update_ui=True):
                 if data is None:
-                    data = {"function": "", "line": 1}
+                    data = {"function": "", "line": 1, "macro": ""}
                 
+                if "macro" not in data:
+                    data["macro"] = ""
+                
+                row = ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                
+                edit_btn = ft.IconButton(ft.Icons.EDIT_OFF, tooltip="Edit Macro", on_click=lambda e: select_entry(row))
                 fn_field = ft.TextField(value=data.get("function", ""), label="Function", expand=True, height=40, content_padding=10, text_size=14)
                 line_field = ft.TextField(value=str(data.get("line", 1)), label="Line", width=60, height=40, keyboard_type=ft.KeyboardType.NUMBER, content_padding=10, text_size=14)
+                delete_btn = ft.IconButton(ft.Icons.DELETE, on_click=lambda e: delete_entry(row))
                 
-                delete_btn = ft.IconButton(ft.Icons.DELETE)
-                
-                row = ft.Row([
-                    fn_field,
-                    line_field,
-                    delete_btn
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-                
-                delete_btn.on_click = lambda e: delete_entry(row)
+                row.controls = [edit_btn, fn_field, line_field, delete_btn]
+                row.data = data
                 
                 reload_list_col.controls.append(row)
                 if update_ui:
                     reload_list_col.update()
 
-            current_entries = self.config.get("reload_function", [{"function": "reload.mcfunction", "line": 1}])
+            current_entries = self.config.get("reload_function", [{"function": "my_pack:reload.mcfunction", "line": 1, "macro": ""}])
             if not isinstance(current_entries, list):
                 current_entries = []
                 
@@ -169,20 +221,21 @@ class DatapackZipper:
                 add_entry(entry, update_ui=False)
 
             def save_close(e):
-                self.config["version_macro"] = macro_field.value
+                self.config["macro"] = temp_global_macro[0]
                 
                 new_list = []
                 for row in reload_list_col.controls:
-                    if isinstance(row, ft.Row) and len(row.controls) >= 2:
-                        fn_val = row.controls[0].value
-                        line_val = row.controls[1].value
+                    if isinstance(row, ft.Row) and len(row.controls) >= 3:
+                        fn_val = row.controls[1].value
+                        line_val = row.controls[2].value
+                        macro_val = row.data.get("macro", "")
                         try:
                             line_int = int(line_val)
                         except ValueError:
                             line_int = 1
                         
                         if fn_val:
-                            new_list.append({"function": fn_val, "line": line_int})
+                            new_list.append({"function": fn_val, "line": line_int, "macro": macro_val})
                 
                 self.config["reload_function"] = new_list
                 self.save_config()
@@ -195,7 +248,7 @@ class DatapackZipper:
 
             dlg = ft.AlertDialog(
                 modal=True,
-                title=ft.Text("Version Configuration"),
+                title=ft.Text("Configure Function Injection"),
                 content=ft.Container(
                     width=600,
                     height=400,
@@ -213,7 +266,8 @@ class DatapackZipper:
                             border_radius=5,
                             padding=5,
                             expand=True
-                        )
+                        ),
+                        ft.Text("Don't forget to provide a namespace!")
                     ])
                 ),
                 actions=[
@@ -239,9 +293,9 @@ class DatapackZipper:
             on_change=lambda e: self.save_config(),
         )
         
-        def toggle_version_text(e):
-            self.version_text.visible = self.version_checkbox.value
-            self.version_text.update()
+        def toggle_injection_text(e):
+            self.injection_text_field.visible = self.injection_checkbox.value
+            self.injection_text_field.update()
             self.save_config()
 
         def on_path_change(e):
@@ -271,28 +325,28 @@ class DatapackZipper:
             on_change=lambda e: self.save_config(),
         )
 
-        self.version_checkbox = ft.Checkbox(
-            label="Insert Version",
-            value=self.config.get("insert_version", False),
-            on_change=toggle_version_text,
+        self.injection_checkbox = ft.Checkbox(
+            label="Enable Injection",
+            value=self.config.get("enable_injection", False),
+            on_change=toggle_injection_text,
         )
         
         config_btn = ft.IconButton(
             icon=ft.Icons.SETTINGS,
-            tooltip="Configure Version Settings",
+            tooltip="Configure Injection Settings",
             on_click=self.open_config_dialog
         )
         
-        self.version_text = ft.TextField(
-            label="Version",
+        self.injection_text_field = ft.TextField(
+            label="Injection Text",
             width=300,
-            value=self.config.get("version_text", ""),
+            value=self.config.get("injection_text", ""),
             on_change=lambda e: self.save_config(),
-            visible=self.config.get("insert_version", False),
+            visible=self.config.get("enable_injection", False),
         )
 
         create_button = ft.Button("Zip Datapack!", on_click=self.create_zip)
-        version_button = ft.Button("Insert Version", on_click=self.insert_version_trigger)
+        injection_button = ft.Button("Inject into Function", on_click=self.inject_function_trigger)
         root_choose_button = ft.IconButton(ft.Icons.FOLDER_OPEN, on_click=self.on_root_folder_picked)
         target_choose_button = ft.IconButton(ft.Icons.FOLDER_OPEN, on_click=self.on_target_folder_picked)
 
@@ -305,9 +359,9 @@ class DatapackZipper:
                 ft.Row([self.root_folder_path, root_choose_button]),
                 ft.Row([self.target_folder_path, target_choose_button]),
                 self.has_rpack_checkbox,
-                ft.Row([self.version_checkbox, config_btn]),
-                self.version_text,
-                ft.Row([create_button, version_button]),
+                ft.Row([self.injection_checkbox, config_btn]),
+                self.injection_text_field,
+                ft.Row([create_button, injection_button]),
             ],
             alignment=ft.MainAxisAlignment.START,
             spacing=15,
@@ -334,16 +388,16 @@ class DatapackZipper:
             self.target_folder_path.update()
             self.save_config()
             
-    def insert_version_trigger(self, e):
-        print("--- Inserting Version text to pack ---\n")
-        if self.version_checkbox.value:
-            if not self.version_text.value:
-                e.page.snack_bar = ft.SnackBar(ft.Text("Please enter a version."))
+    def inject_function_trigger(self, e):
+        print("--- Injecting text to pack ---\n")
+        if self.injection_checkbox.value:
+            if not self.injection_text_field.value:
+                e.page.snack_bar = ft.SnackBar(ft.Text("Please enter injection text."))
                 e.page.snack_bar.open = True
                 e.page.update()
                 return
             
-            insert_version(self.version_text.value, self.config.get("version_macro"), self.config.get("reload_function"), self.root_folder_path.value)
+            insert_to_function(self.injection_text_field.value, self.config.get("macro"), self.config.get("reload_function"), self.root_folder_path.value)
     
     def create_zip(self, e):
         print("--- Creating datapack zip... ---\n")
