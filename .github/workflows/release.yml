@@ -68,7 +68,7 @@ jobs:
         # IMPORTANT: This fixes the UnicodeEncodeError ('charmap' codec failed)
         env:
           PYTHONIOENCODING: utf-8
-        run: flet build windows --product "datapack_zipper" --yes
+        run: flet build windows --product "Datapack Manager" --yes
 
       # Install Inno Setup (ONLY ON WINDOWS)
       - name: Setup Inno Setup
@@ -81,7 +81,7 @@ jobs:
         shell: powershell
         run: |
           # Dynamically create the Inno Setup Script
-          $AppName = "datapack_zipper"
+          $AppName = "Datapack Manager"
           # Extract version from tag (remove 'v')
           $Version = "${{ github.ref_name }}" -replace "v",""
           
@@ -120,13 +120,13 @@ jobs:
       # 2. LINUX BUILD
       - name: Build Linux
         if: runner.os == 'Linux'
-        run: flet build linux --product "datapack_zipper" --yes
+        run: flet build linux --product "Datapack Manager" --yes
 
       - name: Package Linux (Tar.gz)
         if: runner.os == 'Linux'
         run: |
           cd build/linux
-          tar -czvf ../../datapack_zipper_Linux_${{ github.ref_name }}.tar.gz *
+          tar -czvf ../../datapack_manager_Linux_${{ github.ref_name }}.tar.gz *
 
       # --- Upload Artifacts ---
       - name: Upload Artifacts

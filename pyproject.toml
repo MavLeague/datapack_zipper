@@ -1,6 +1,6 @@
 [project]
 name = "datapack_zipper"
-version = "0.0.3"
+version = "0.1.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.12"
@@ -21,7 +21,7 @@ dev = [
 
 [tool.flet]
 org = "com.mavleague"
-product = "datapack_zipper"
+product = "datapack_manager"
 company = "Mav League"
 copyright = "Copyright (C) 2025-2026 by Mav League"
 
