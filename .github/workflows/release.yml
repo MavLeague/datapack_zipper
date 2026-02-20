@@ -81,7 +81,7 @@ jobs:
         shell: powershell
         run: |
           # Dynamically create the Inno Setup Script
-          $AppName = "Datapack Manager"
+          $AppName = "datapack_manager"
           # Extract version from tag (remove 'v')
           $Version = "${{ github.ref_name }}" -replace "v",""
           
