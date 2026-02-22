@@ -18,7 +18,7 @@ class ConsoleOutput(ft.Container):
         self.padding = 10
         self.expand = True
         self.height = 300 # Fixed height or expand=True
-        self.border = ft.border.all(1, ft.Colors.GREY_800)
+        self.border = ft.Border.all(1, ft.Colors.GREY_800)
 
     def write(self, text):
         if text.strip():  # Prevents unnecessary empty lines
