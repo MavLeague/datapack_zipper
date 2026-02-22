@@ -60,16 +60,18 @@ class ResourceSync:
     def save_config(self):
         # Define the fields you want to save here
         data = {
+            "source_path": (getattr(self, 'source_path', None) and self.source_path.value) or self.config.get("source_path", ""),
             "minecraft_path": (getattr(self, 'minecraft_path', None) and self.minecraft_path.value) or self.config.get("minecraft_path", ""),
-            "sync_entries": []
+            "sync_entries": [],
+            "use_source": getattr(self, 'use_source_checkbox', None) and self.use_source_checkbox.value
         }
-        
         if hasattr(self, 'entries_column'):
             for row in self.entries_column.controls:
                 if isinstance(row, ft.Row) and len(row.controls) > 0:
                     data["sync_entries"].append({
-                        "name": row.controls[0].value,
-                        "paused": row.data
+                        "name": row.data.get("name", row.controls[1].value),
+                        "paused": row.data.get("paused", False),
+                        "types": row.data.get("types", [])
                     })
         else:
             data["sync_entries"] = self.config.get("sync_entries", [])
@@ -93,6 +95,14 @@ class ResourceSync:
         except Exception as e:
             print(f"Failed to save config: {e}")
     
+    async def on_source_path_picked(self, e: ft.Event[ft.Button]):
+        path = await self.file_picker.get_directory_path()
+        if path is not None:
+            self.source_path.value = path
+            self.source_path.tooltip = path
+            self.source_path.update()
+            self.save_config()
+
     async def on_minecraft_path_picked(self, e: ft.Event[ft.Button]):
         path = await self.file_picker.get_directory_path()
         if path is not None:
@@ -107,7 +117,34 @@ class ResourceSync:
             e.control.tooltip = e.control.value
             e.control.update()
             self.save_config()
+            
+        def use_source_checked(e):
+            if self.use_source_checkbox.value == True:
+                self.source_path.visible = True
+                self.source_browse_btn.visible = True
+            else:
+                self.source_path.visible = False
+                self.source_browse_btn.visible = False
+            
+            self.save_config()
 
+        self.use_source_checkbox = ft.Checkbox(
+            label="Use Source Path",
+            value=self.config.get("use_source", False),
+            on_change=use_source_checked,
+        )
+
+        self.source_path = ft.TextField(
+            label="Source Folder Path",
+            width=300,
+            value=self.config.get("source_path", ""),
+            tooltip=self.config.get("source_path", ""),
+            on_change=on_path_change,
+            visible=self.config.get("use_source", False),
+        )
+       
+        self.source_browse_btn = ft.IconButton(ft.Icons.FOLDER_OPEN, on_click=self.on_source_path_picked, visible=self.config.get("use_source", False))
+        
         self.minecraft_path = ft.TextField(
             label="Minecraft Game Path",
             width=300,
@@ -129,6 +166,8 @@ class ResourceSync:
         # Main layout
         return ft.Column(
             [
+                ft.Row([self.use_source_checkbox, ft.Icon(ft.Icons.INFO,tooltip="If you are using a seperate folder from \nthe datapacks folder in your game path.")]),
+                ft.Row([self.source_path, self.source_browse_btn]),
                 ft.Row([self.minecraft_path, minecraft_browse_btn]),
                 ft.Row([
                     ft.Card(
@@ -149,12 +188,15 @@ class ResourceSync:
             spacing=15,
         )
 
-    def add_entry_row(self, value="", update_ui=True):
+    def add_entry_row(self, value="", update_ui=True, *types):
         name = value
         paused = False
+        stored_types = list(types)
+
         if isinstance(value, dict):
             name = value.get("name", "")
             paused = value.get("paused", False)
+            stored_types = value.get("types", [])
             
         tf = ft.Text(value=name, key="name", width=220)
         
@@ -165,17 +207,26 @@ class ResourceSync:
             
         def toggle_pause(e):
             if not self.syncronizing:
-                row.data = not row.data
-                e.control.icon = ft.Icons.PLAY_ARROW if row.data else ft.Icons.PAUSE
-                e.control.tooltip = "Resume Sync" if row.data else "Pause Sync"
+                row.data["paused"] = not row.data["paused"]
+                e.control.icon = ft.Icons.PLAY_ARROW if row.data["paused"] else ft.Icons.PAUSE
+                e.control.tooltip = "Resume Sync" if row.data["paused"] else "Pause Sync"
                 e.control.update()
                 self.save_config()
+
+        type_display = ft.Row([])
+        if "datapack" in stored_types:
+            datapack_icon = ft.Icon(ft.Icons.CODE, tooltip="Data Pack")
+            type_display.controls.append(datapack_icon)
+        
+        if "resourcepack" in stored_types:
+            resourcepack_icon = ft.Icon(ft.Icons.IMAGE, tooltip="Resource Pack")
+            type_display.controls.append(resourcepack_icon)
 
         action_btn = ft.IconButton(ft.Icons.PLAY_ARROW if paused else ft.Icons.PAUSE, tooltip="Resume Sync" if paused else "Pause Sync", on_click=toggle_pause, key="pause")
         delete_btn = ft.IconButton(ft.Icons.DELETE, tooltip="Delete", on_click=delete_entry)
         
-        row = ft.Row([tf, action_btn, delete_btn])
-        row.data = paused # False = Active, True = Paused
+        row = ft.Row([type_display, tf, action_btn, delete_btn])
+        row.data = {"name": name, "paused": paused, "types": stored_types}
         self.entries_column.controls.append(row)
         
         if update_ui:
@@ -184,44 +235,95 @@ class ResourceSync:
 
     def reload_list(self, e):
         self.entries_column.controls.clear()
-        if os.path.exists(os.path.join(self.minecraft_path.value, "datapacks")):
-            for datapack in os.listdir(os.path.join(self.minecraft_path.value, "datapacks")):
-                print(datapack)
-                if os.path.exists(os.path.join(self.minecraft_path.value, "datapacks", datapack, "assets")):
-                    self.add_entry_row(value=datapack)
-                    print(f"{datapack} added!")
-                else:
-                    print(f"{datapack} skipped...")
+        if not self.use_source_checkbox.value:
+            if os.path.exists(os.path.join(self.minecraft_path.value, "datapacks")):
+                for datapack in os.listdir(os.path.join(self.minecraft_path.value, "datapacks")):
+                    print(datapack)
+                    if os.path.exists(os.path.join(self.minecraft_path.value, "datapacks", datapack, "assets")):
+                        self.add_entry_row(datapack, True, "resourcepack")
+                        print(f"{datapack} added!")
+                    else:
+                        print(f"{datapack} skipped...")
+            else:
+                print(f"Your Minecraft Folder doesn't contain a Folder called \"datapacks\".")
+                
         else:
-            print(f"Your Minecraft Folder doesn't contain a Folder called \"datapacks\".")
+            if os.path.exists(self.source_path.value) and os.listdir(self.source_path.value):
+                for datapack in os.listdir(self.source_path.value):
+                    print(datapack)
+                    if os.path.exists(os.path.join(self.source_path.value, datapack, "pack.mcmeta")):
+                        found_types = []
+                        if os.path.exists(os.path.join(self.source_path.value, datapack, "assets")):
+                            found_types.append("resourcepack")
+                        if os.path.exists(os.path.join(self.source_path.value, datapack, "data")):
+                            found_types.append("datapack")
+                        
+                        if found_types:
+                            self.add_entry_row(datapack, True, *found_types)
+                        print(f"{datapack} added!")
+                    else:
+                        print(f"{datapack} skipped...")
+            else:
+                print(f"Your Source Folder is empty or doesn't exist.")
+                
         
     
     def add_list2manager(self):
         
         self.manager.clear()
         
+        source_folder_list = self.source_path.value
         datapack_folder = os.path.join(self.minecraft_path.value, "datapacks")
         resourcepack_folder = os.path.join(self.minecraft_path.value, "resourcepacks")
         
         for row_control in self.entries_column.controls:
             if isinstance(row_control, ft.Row):
-                if not row_control.data:
-                    datapack_name = row_control.controls[0].value
-                    source_folder = os.path.join(datapack_folder, datapack_name)
-                    target_folder = os.path.join(resourcepack_folder, datapack_name)
+                if row_control.data and not row_control.data.get("paused", False):
+                    datapack_name = row_control.data.get("name")
                     
-                    # add assets
-                    self.manager.add_sync_pair(os.path.join(source_folder, "assets"), os.path.join(target_folder, "assets"))
+                    if self.use_source_checkbox.value:
+                        source_folder = os.path.join(source_folder_list, datapack_name)
+                    else:
+                        source_folder = os.path.join(datapack_folder, datapack_name)
                     
-                    # add Overlays
-                    version_folders = get_version_folders(os.path.join(source_folder, "resource_pack.mcmeta"))
-                    if not version_folders == []:
-                        for folder in version_folders:
-                            self.manager.add_sync_pair(os.path.join(source_folder, folder, "assets"), os.path.join(target_folder, folder, "assets"))
-                            
-                    # add files
-                    self.manager.add_single_file_sync(os.path.join(source_folder, "resource_pack.mcmeta"), os.path.join(target_folder, "pack.mcmeta"))
-                    self.manager.add_single_file_sync(os.path.join(source_folder, "pack.png"), os.path.join(target_folder, "pack.png"))
+                    print(f"{row_control} has the types {row_control.data.get("types", [])}")
+                    
+                    if "resourcepack" in row_control.data.get("types", []):
+                        target_folder = os.path.join(resourcepack_folder, datapack_name)
+                        
+                        if "datapack" in row_control.data.get("types", []):
+                            pack_file = "resource_pack.mcmeta"
+                        else: 
+                            pack_file = "pack.mcmeta"
+
+                        # add assets
+                        self.manager.add_sync_pair(os.path.join(source_folder, "assets"), os.path.join(target_folder, "assets"))
+                    
+                        # add Overlays
+                        version_folders = get_version_folders(os.path.join(source_folder, pack_file))
+                        if not version_folders == []:
+                            for folder in version_folders:
+                                self.manager.add_sync_pair(os.path.join(source_folder, folder, "assets"), os.path.join(target_folder, folder, "assets"))
+                                
+                        # add files
+                        self.manager.add_single_file_sync(os.path.join(source_folder, pack_file), os.path.join(target_folder, "pack.mcmeta"))
+                        self.manager.add_single_file_sync(os.path.join(source_folder, "pack.png"), os.path.join(target_folder, "pack.png"))
+
+                    if "datapack" in row_control.data.get("types", []):
+                        target_folder = os.path.join(datapack_folder, datapack_name)
+                        
+                        # add data
+                        self.manager.add_sync_pair(os.path.join(source_folder, "data"), os.path.join(target_folder, "data"))
+                    
+                        # add Overlays
+                        version_folders = get_version_folders(os.path.join(source_folder, "pack.mcmeta"))
+                        if not version_folders == []:
+                            for folder in version_folders:
+                                self.manager.add_sync_pair(os.path.join(source_folder, folder, "data"), os.path.join(target_folder, folder, "data"))
+                                
+                        # add files
+                        self.manager.add_single_file_sync(os.path.join(source_folder, "pack.mcmeta"), os.path.join(target_folder, "pack.mcmeta"))
+                        self.manager.add_single_file_sync(os.path.join(source_folder, "pack.png"), os.path.join(target_folder, "pack.png"))
 
                 
                 
