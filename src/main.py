@@ -4,9 +4,11 @@ from resource_sync import ResourceSync
 from modules.console import ConsoleOutput
 import webbrowser
 import sys
+import requests
 
 # set version variable
 v_name = "test-build"
+repo_api_url = "https://api.github.com/repos/MavLeague/datapack_zipper/releases/latest"
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
@@ -52,16 +54,56 @@ def main(page: ft.Page):
             console.visible = not console.visible
             console.update()
 
+        uptodate_text = ft.Text("You are Uptodate!", visible=False, size=16,)
+        update_button = ft.Button("Check for Update", on_click=lambda e: open_update(e, update_button, uptodate_text), visible=True)
+        
         info = ft.AlertDialog(
             modal=False,
             title=ft.Text("About this Program"),
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.INFO),ft.Text(f"Flet Version: {ft.__version__}\nCurrent Build: {v_name}")]),
                 ft.Row([ft.Icon(ft.Icons.BUG_REPORT),ft.Button(f"Report Issue", on_click=lambda _: webbrowser.open("https://github.com/MavLeague/datapack_zipper/issues", new=0, autoraise=True))]),
-                ft.Row([ft.Icon(ft.Icons.CODE),ft.Button("Toggle Console", on_click=toggle_console)])
-            ], height=150)
+                ft.Row([ft.Icon(ft.Icons.CODE),ft.Button("Toggle Console", on_click=toggle_console)]),
+                ft.Row([ft.Icon(ft.Icons.UPDATE),update_button, uptodate_text])
+            ], height=180)
         )
         page.show_dialog(info)
+
+    def open_update(e, update_button=None, uptodate_text=None):
+        try:
+            response = requests.get(repo_api_url)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            release_title = data.get("name", "")
+            tag_name = data.get("tag_name", v_name)
+            description = data.get("body","")
+            
+        except requests.exceptions.HTTPError as err:
+            if response.status_code == 404:
+                return "Error 404: Release not found."
+            return f"HTTP Error occurred: {err}"
+    
+        if not tag_name == v_name:
+                update_info = ft.AlertDialog(
+                    modal=False,
+                    title=ft.Text(f"✨New Update: {release_title}!✨"),
+                    content=ft.Column([
+                        ft.Markdown(description),
+                        ft.Button("Download!", on_click=lambda _: webbrowser.open(f"https://github.com/MavLeague/datapack_zipper/releases/tag/{tag_name}"))
+                        ], width=250, scroll=ft.ScrollMode.AUTO),
+                )
+                
+                page.show_dialog(update_info)
+            
+        else:
+            if update_button and uptodate_text:
+                update_button.visible = False
+                uptodate_text.visible = True
+                update_button.update()
+                uptodate_text.update()
+            print("No update Needed!")
 
     # Other GUI parts could be here
     header = ft.Row([ft.IconButton(ft.Icons.INFO, on_click=open_info),ft.Text("Datapack Manager", size=24, weight=ft.FontWeight.BOLD)])
@@ -84,6 +126,9 @@ def main(page: ft.Page):
         ]),
         console
     )
+    
+    page.update()
+    open_update(None)
     
 """
     # Calculate the sum height of all objects on the page
