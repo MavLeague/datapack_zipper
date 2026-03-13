@@ -35,15 +35,28 @@ jobs:
           
           version = "${{ github.ref_name }}"
           file_path = "src/main.py"
-          
+          search_term = "v_name"
+          found_index = -1
+
           with open(file_path, "r", encoding="utf-8") as f:
               lines = f.readlines()
-          
-          if len(lines) >= 9:
-              lines[8] = re.sub(r'(["\']).*?\1', f"\\g<1>{version}\\g<1>", lines[8], count=1)
-              with open(file_path, "w", encoding="utf-8") as f:
-                  f.writelines(lines)
-              print(f"Updated line 9 in {file_path} with version {version}")
+
+          for index, line in enumerate(lines):
+              if search_term in line:
+                  found_index = index
+                  print(f"Found '{search_term}' at line {index + 1}")
+                  break
+
+          if found_index != -1:
+              if len(lines) >= 5:
+                  lines[found_index] = re.sub(r'(["\']).*?\1', f"\\g<1>{version}\\g<1>", lines[found_index], count=1)
+                  with open(file_path, "w", encoding="utf-8") as f:
+                      f.writelines(lines)
+                  print(f"Updated line {found_index + 1} in {file_path} with version {version}")
+              pass
+          else:
+              print(f"'{search_term}' not found.")
+
 
       # --- Linux Dependencies ---
       - name: Install Linux System Dependencies

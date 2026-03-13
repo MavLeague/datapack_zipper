@@ -1,3 +1,7 @@
+# set version variable
+v_name = "test-build"
+repo_api_url = "https://api.github.com/repos/MavLeague/datapack_zipper/releases/latest"
+
 import flet as ft
 from datapack_zipper import DatapackZipper
 from resource_sync import ResourceSync
@@ -5,10 +9,6 @@ from modules.console import ConsoleOutput
 import webbrowser
 import sys
 import requests
-
-# set version variable
-v_name = "test-build"
-repo_api_url = "https://api.github.com/repos/MavLeague/datapack_zipper/releases/latest"
 
 def make_section(title, content, icon=None, width=None, height=None):
     header = ft.Row(
