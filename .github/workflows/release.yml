@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"  # Triggers automatically on tags like v1.0.0
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: write
 
@@ -48,12 +51,10 @@ jobs:
                   break
 
           if found_index != -1:
-              if len(lines) >= 5:
-                  lines[found_index] = re.sub(r'(["\']).*?\1', f"\\g<1>{version}\\g<1>", lines[found_index], count=1)
-                  with open(file_path, "w", encoding="utf-8") as f:
-                      f.writelines(lines)
-                  print(f"Updated line {found_index + 1} in {file_path} with version {version}")
-              pass
+              lines[found_index] = re.sub(r'(["\']).*?\1', f"\\g<1>{version}\\g<1>", lines[found_index], count=1)
+              with open(file_path, "w", encoding="utf-8") as f:
+                  f.writelines(lines)
+              print(f"Updated line {found_index + 1} in {file_path} with version {version}")
           else:
               print(f"'{search_term}' not found.")
 
